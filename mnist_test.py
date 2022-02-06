@@ -12,7 +12,7 @@ import pickle
 import numpy as np
 import sklearn
 import cv2
-import keras
+from tensorflow.keras.datasets import mnist
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from numpy import linalg as LA
@@ -22,7 +22,8 @@ from sklearn.metrics.pairwise import euclidean_distances
 def main():
 
 	# load data
-	fr=open('pca_params_E5S5.pkl','rb')  
+	fr = open('pca_params.pkl', 'rb')
+	#fr=open('pca_params_E5S5.pkl','rb')
 	pca_params=pickle.load(fr, encoding='latin1')
 	fr.close()
 

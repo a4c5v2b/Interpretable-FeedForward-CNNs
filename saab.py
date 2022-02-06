@@ -1,7 +1,7 @@
 
 # --------------------------------------------------------------------------------------------------
 # EE569 Homework Assignment #6
-# Date: April 28, 2019
+# Date: April 28, 2019``````````````````````````````````````````````````````````````````````````````````
 # Name: Suchismita Sahu
 # ID: 7688176370
 # email: suchisms@usc.edu
@@ -27,12 +27,12 @@ def parse_list_string(list_string):
             start = int(term[0])
             end = int(term[1])
             results += range(start, end+1)
-    return results
+    return results # results = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] for classes = 0-9
 
 # convert responses to patches representation
 
 
-def window_process(samples, kernel_size, stride):
+def window_process(samples, wp_kernel_size, stride):
     '''
     Create patches
     :param samples: [num_samples, feature_height, feature_width, feature_channel]
@@ -40,13 +40,12 @@ def window_process(samples, kernel_size, stride):
     :param stride: int
     :return patches: flattened, [num_samples, output_h, output_w, feature_channel*kernel_size^2]
     '''
-    n, h, w, c = samples.shape
-    output_h = (h - kernel_size)//stride + 1
-    output_w = (w - kernel_size)//stride + 1
-    patches = view_as_windows(
-        samples, (1, kernel_size, kernel_size, c), step=(1, stride, stride, c))
-    print(patches.shape)
-    patches = patches.reshape(n, output_h, output_w, c*kernel_size*kernel_size)
+    n, h, w, c = samples.shape # (10000, 32, 32, 1)
+    output_h = (h - wp_kernel_size)//stride + 1  # ((32-4)//4) + 1 = 8
+    output_w = (w - wp_kernel_size)//stride + 1 # ((32-4)//4) + 1 = 8
+    patches = view_as_windows(samples, (1, wp_kernel_size, wp_kernel_size, c), step=(1, stride, stride, c)) # (10000, 8, 8, 1, 1, 4, 4, 1), kernel size = [4,4], stride = 4
+    print(" Patches shape: ", patches.shape)
+    patches = patches.reshape(n, output_h, output_w, c*wp_kernel_size*wp_kernel_size) # (10000, 8, 8, 16)
     return patches
 
 
@@ -66,22 +65,40 @@ def select_balanced_subset(images, labels, use_num_images, use_classes):
     select equal number of images from each classes
     '''
     # Shuffle
-    num_total = images.shape[0]
-    shuffle_idx = np.random.permutation(num_total)
-    images = images[shuffle_idx]
-    labels = labels[shuffle_idx]
+    num_total = images.shape[0] # 60000
+    shuffle_idx = np.random.permutation(num_total) # 60000 random num
+    sbs_images = images[shuffle_idx] # (60000, 32, 32, 1)
+    sbs_labels = labels[shuffle_idx] # (60000,)
 
-    num_class = len(use_classes)
-    num_per_class = int(use_num_images/num_class)
-    selected_images = np.zeros(
-        (use_num_images, images.shape[1], images.shape[2], images.shape[3]))
-    selected_labels = np.zeros(use_num_images)
+    num_class = len(use_classes) # num_class = 10
+    num_per_class = int(use_num_images/num_class) # 10000/10 = 1000
+    selected_images = np.zeros((use_num_images, sbs_images.shape[1], sbs_images.shape[2], sbs_images.shape[3])) # (10000, 32, 32, 1)
+    selected_labels = np.zeros(use_num_images) # (10000,)
     for i in range(num_class):
-        images_in_class = images[labels == i]
-        selected_images[i*num_per_class:(i+1) *
-                        num_per_class] = images_in_class[:num_per_class]
-        selected_labels[i*num_per_class:(i+1) *
-                        num_per_class] = np.ones((num_per_class))*i
+        images_in_class = sbs_images[sbs_labels == i]  # Extract the image train data having the label i, objective: to build up a uniform class distribution dataset
+        selected_images[i*num_per_class:(i+1)*num_per_class] = images_in_class[:num_per_class]
+        selected_labels[i*num_per_class:(i+1)*num_per_class] = np.ones((num_per_class))*i
+
+    """
+    Showing the class distribution of the original train data
+    """
+    sum = 0
+    for m in range(num_class):
+        images_in_class = sbs_images[sbs_labels == m]
+        print("Number of samples of class {} is: {}".format(m,images_in_class.shape[0]))
+        sum += images_in_class.shape[0]
+    print("Sum = ", sum)
+
+    """
+    Showing the class distribution of the train data after the redistribution above
+    """
+    sum = 0
+    for m in range(num_class):
+        images_in_class = selected_images[selected_labels == m]
+        print("Number of samples of class {} is: {}".format(m, images_in_class.shape[0]))
+        sum += images_in_class.shape[0]
+    print("Sum = ", sum)
+
 
     # Shuffle again
     shuffle_idx = np.random.permutation(num_per_class*num_class)
@@ -108,11 +125,11 @@ def find_kernels_pca(samples, num_kernels, energy_percent):
     :param energy_percent: the percent of energy to be preserved
     :return: kernels, sample_mean
     '''
-    if num_kernels:
+    if num_kernels: # if num_kernels > 0
         num_components = num_kernels
         pca = PCA(n_components=num_components, svd_solver='full')
     else:
-        pca = PCA(n_components=samples.shape[1], svd_solver='full')
+        pca = PCA(n_components=samples.shape[1], svd_solver='full')  # samples.shape[1] = 16
 
     pca.fit(samples)
 
@@ -146,15 +163,14 @@ def multi_Saab_transform(images, labels, kernel_sizes, num_kernels, stride, ener
 return: pca_params: PCA kernels and mean
 '''
 
-    num_total_images = images.shape[0]
-    if use_num_images < num_total_images and use_num_images > 0:
-        sample_images, selected_labels = select_balanced_subset(
-            images, labels, use_num_images, use_classes)
+    num_total_images = images.shape[0] #60000
+    if use_num_images < num_total_images and use_num_images > 0: # 10000 < 60000 and 10000 > 0
+        sample_images, selected_labels = select_balanced_subset(images, labels, use_num_images, use_classes) # Make the dataset's class distribution becomes uniform (Each class has 1000 samples)
     else:
         sample_images = images
     # sample_images=images
-    num_samples = sample_images.shape[0]
-    num_layers = len(kernel_sizes)
+    num_samples = sample_images.shape[0] # 10000
+    num_layers = len(kernel_sizes)  # 2 layers
     pca_params = {}
     pca_params['num_layers'] = num_layers
     pca_params['kernel_size'] = kernel_sizes
@@ -164,27 +180,24 @@ return: pca_params: PCA kernels and mean
         print('--------stage %d --------' % i)
         # Create patches
 
-        sample_patches = window_process(
-            sample_images, kernel_sizes[i], stride)  # 10000 x 8 x 8 x 16
+        sample_patches = window_process(sample_images, kernel_sizes[i], stride)  # 10000 x 8 x 8 x 16
         h = sample_patches.shape[1]
         w = sample_patches.shape[2]
 
     # Flatten
-        sample_patches = sample_patches.reshape(
-            [-1, sample_patches.shape[-1]])  # 640000 x 16
+        sample_patches = sample_patches.reshape([-1, sample_patches.shape[-1]])  # 640000 x 16
+
+# Question Part!!!!
 
     # Remove feature mean (Set E(X)=0 for each dimension)
-        sample_patches_centered, feature_expectation = remove_mean(
-            sample_patches, axis=0)  # 640000 x 16
+        sample_patches_centered, feature_expectation = remove_mean(sample_patches, axis=0)  # 640000 x 16, (1, 16)
     # Remove patch mean
-        training_data, dc = remove_mean(
-            sample_patches_centered, axis=1)  # 640000 x 16
+        training_data, dc = remove_mean(sample_patches_centered, axis=1)  # 640000 x 16, (640000, 1)
 
     # Compute PCA kernel
         if not num_kernels is None:
             num_kernel = num_kernels[i]
-        kernels, mean = find_kernels_pca(
-            training_data, num_kernel, energy_percent)
+        kernels, mean = find_kernels_pca(training_data, num_kernel, energy_percent)
 
     # Add DC kernel
         num_channels = sample_patches.shape[-1]
@@ -242,8 +255,7 @@ def initialize(sample_images, pca_params):
         mean = pca_params['Layer_%d/pca_mean' % i]
         
         # Create patches
-        sample_patches = window_process(
-            sample_images, kernel_sizes[i], kernel_sizes[i])  # overlapping
+        sample_patches = window_process(sample_images, kernel_sizes[i], kernel_sizes[i])  # overlapping
         h = sample_patches.shape[1]
         w = sample_patches.shape[2]
 

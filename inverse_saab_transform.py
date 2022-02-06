@@ -8,7 +8,7 @@
 # --------------------------------------------------------------------------------------------------
 
 import pickle
-from keras.datasets import mnist
+from tensorflow.keras.datasets import mnist
 import numpy as np
 from saab import *
 import matplotlib.pyplot as plt

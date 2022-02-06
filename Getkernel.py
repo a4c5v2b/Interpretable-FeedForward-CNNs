@@ -13,23 +13,17 @@ import saab
 
 flags.DEFINE_string("output_path", None, "The output dir to save params")
 flags.DEFINE_string("use_classes", "0-9", "Supported format: 0,1,5-9")
-flags.DEFINE_string("kernel_sizes", "4,4",
-                    "Kernels size for each stage. Format: '3,3'")
-flags.DEFINE_integer(
-    "stride", "4", "number of steps taken to move the kernel across image. Default: 1")
-flags.DEFINE_string("num_kernels", "12,40",
-                    "Num of kernels for each stage. Format: '4,10'")
-flags.DEFINE_float("energy_percent", None,
-                   "Energy to be preserved in each stage")
-flags.DEFINE_integer("use_num_images", 10000,
-                     "Num of images used for training")
+flags.DEFINE_string("kernel_sizes", "4,4", "Kernels size for each stage. Format: '3,3'")
+flags.DEFINE_integer("stride", "4", "number of steps taken to move the kernel across image. Default: 1")
+flags.DEFINE_string("num_kernels", "12,40", "Num of kernels for each stage. Format: '4,10'")
+flags.DEFINE_float("energy_percent", None, "Energy to be preserved in each stage")
+flags.DEFINE_integer("use_num_images", 10000, "Num of images used for training")
 FLAGS = flags.FLAGS
 
 
 def main():
         # read data
-    train_images, train_labels, test_images, test_labels, class_list = data.import_data(
-        FLAGS.use_classes)
+    train_images, train_labels, test_images, test_labels, class_list = data.import_data(FLAGS.use_classes) # To load the data of required classes
     print('Training image size:', train_images.shape)
     print('Testing_image size:', test_images.shape)
 

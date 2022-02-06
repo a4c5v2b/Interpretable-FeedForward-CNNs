@@ -10,13 +10,14 @@ import pickle
 import numpy as np
 import data
 import saab
-import keras
+from tensorflow.keras.datasets import mnist
 import sklearn
 
 def main():
     
 	# load data
-	fr=open('pca_params_E5S5.pkl','rb')  
+	#fr=open('pca_params_E5S5.pkl','rb')
+	fr = open('pca_params.pkl', 'rb')
 	pca_params=pickle.load(fr)
 	fr.close()
 
