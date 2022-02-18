@@ -10,6 +10,7 @@ import data
 import pickle
 import numpy as np
 import sklearn
+import tensorflow as tf
 import cv2
 from tensorflow.keras.datasets import mnist
 from sklearn.decomposition import PCA
@@ -116,7 +117,7 @@ def main():
 
 		else:
 			# least square regression
-			labels=keras.utils.to_categorical(train_labels,10)
+			labels=tf.keras.utils.to_categorical(train_labels,10)
 			A=np.ones((feature.shape[0],1))
 			feature=np.concatenate((A,feature),axis=1)
 			weight=np.matmul(LA.pinv(feature),labels)

@@ -15,6 +15,12 @@ from skimage.measure import block_reduce
 import matplotlib.pyplot as plt
 
 
+import skcuda.linalg as linalg
+from skcuda.linalg import PCA as cuPCA
+import pycuda.autoinit
+import pycuda.gpuarray as gpuarray
+
+
 def parse_list_string(list_string):
     """Convert the class string to list."""
     elem_groups = list_string.split(",")
@@ -125,27 +131,66 @@ def find_kernels_pca(samples, num_kernels, energy_percent):
     :param energy_percent: the percent of energy to be preserved
     :return: kernels, sample_mean
     '''
+    # if num_kernels: # if num_kernels > 0
+    #     num_components = num_kernels
+    #     pca = PCA(n_components=num_components)
+    # else:
+    #     pca = PCA(n_components=samples.shape[1], svd_solver='full')  # samples.shape[1] = 16
+    #
+    # pca.fit(samples)
+    # X_new = pca.fit_transform(samples)
+    # #X_new = np.dot(samples,pca.components_.T)
+    # #print(pca.components_.shape)
+    # # Compute the number of kernels corresponding to preserved energy
+    # if energy_percent:
+    #     energy = np.cumsum(pca.explained_variance_ratio_)
+    #     num_components = np.sum(energy < energy_percent)+1
+    #
+    # kernels = pca.components_[:num_components, :] # The shape of pca.components_ is (12, 16); The shape of kernels is (12, 16)
+    # mean = pca.mean_
+    #
+    # print("Num of kernels: %d" % num_components)
+    # print("Energy percent: %f" % np.cumsum(
+    #     pca.explained_variance_ratio_)[num_components-1])
+    # return kernels, mean
+
+    """
+    Start of skcuda version
+    """
+
+    samples_double = samples.astype('single',order="C")
+    samples_gpu = gpuarray.to_gpu(samples_double) # copy data to gpu
+
+
     if num_kernels: # if num_kernels > 0
         num_components = num_kernels
-        pca = PCA(n_components=num_components, svd_solver='full')
+        pca = cuPCA(n_components=num_components)
     else:
-        pca = PCA(n_components=samples.shape[1], svd_solver='full')  # samples.shape[1] = 16
+        pca = cuPCA(n_components=samples.shape[1])  # samples.shape[1] = 16
 
-    pca.fit(samples)
+
+    T_gpu = pca.fit_transform(samples_gpu) # calculate the principal components
+
+    std_vec = np.nanstd(T_gpu.get(), axis=0)
+    T = T_gpu.get()  # The principal components are not in descending order
+    T_new = T[:, (-std_vec).argsort()[:T.shape[1]].tolist()]
+    explained_variance = np.std(T_new, axis=0)
+    samples_inv = np.linalg.pinv(samples)
+
+    principal_components = np.dot(samples_inv,T_new).T
+    print("The shape of principal_components: ", principal_components.shape)
 
     # Compute the number of kernels corresponding to preserved energy
     if energy_percent:
-        energy = np.cumsum(pca.explained_variance_ratio_)
+        energy = np.cumsum(explained_variance)
         num_components = np.sum(energy < energy_percent)+1
 
-    kernels = pca.components_[:num_components, :]
-    mean = pca.mean_
+    kernels = principal_components[:num_components, :] # The shape of pca.components_ is (12, 16); The shape of kernels is (12, 16)
+    mean = np.mean(samples_double, axis=0)
 
     print("Num of kernels: %d" % num_components)
-    print("Energy percent: %f" % np.cumsum(
-        pca.explained_variance_ratio_)[num_components-1])
+    print("Energy percent: %f" % np.cumsum(explained_variance)[num_components-1])
     return kernels, mean
-
 
 def multi_Saab_transform(images, labels, kernel_sizes, num_kernels, stride, energy_percent, use_num_images, use_classes):
     '''
